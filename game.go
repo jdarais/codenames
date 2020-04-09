@@ -113,6 +113,7 @@ func randomState(words []string) GameState {
 		PermIndex: 0,
 		Revealed:  make([]bool, wordsPerGame),
 		WordSet:   words,
+		SpyMasters: make([]string, 0),
 	}
 }
 
