@@ -10,6 +10,7 @@ import (
 )
 
 const wordsPerGame = 25
+const maxSpyMasters = 2
 
 type Team int
 
@@ -79,11 +80,12 @@ func (t Team) Repeat(n int) []Team {
 // a Game's state. It's used to recreate games after
 // a process restart.
 type GameState struct {
-	Seed      int64    `json:"seed"`
-	PermIndex int      `json:"perm_index"`
-	Round     int      `json:"round"`
-	Revealed  []bool   `json:"revealed"`
-	WordSet   []string `json:"word_set"`
+	Seed        int64    `json:"seed"`
+	PermIndex   int      `json:"perm_index"`
+	Round       int      `json:"round"`
+	Revealed    []bool   `json:"revealed"`
+	WordSet		[]string `json:"word_set"`
+	SpyMasters  []string `json:"spy_masters"`
 }
 
 // ID returns a hash of the game state.
@@ -122,6 +124,7 @@ func nextGameState(state GameState) GameState {
 		state.PermIndex = 0
 	}
 	state.Revealed = make([]bool, wordsPerGame)
+	state.SpyMasters = make([]string, 0)
 	return state
 }
 
@@ -189,6 +192,39 @@ func (g *Game) Guess(idx int) error {
 		g.Round = g.Round + 1
 	}
 	return nil
+}
+
+func (g *Game) SetSpyMaster(playerID string, isSpyMaster bool) error {
+	playerIndex := -1
+	for i, p := range g.GameState.SpyMasters {
+		if p == playerID {
+			playerIndex = i
+			break
+		}
+	}
+
+	if playerIndex >= 0 {
+		if !isSpyMaster {
+			numSpyMasters := len(g.GameState.SpyMasters)
+			g.GameState.SpyMasters[playerIndex] = g.GameState.SpyMasters[numSpyMasters - 1]
+			g.GameState.SpyMasters = g.GameState.SpyMasters[:numSpyMasters - 1]
+		}
+	} else {
+		if isSpyMaster {
+			numSpyMasters := len(g.GameState.SpyMasters)
+			if numSpyMasters >= maxSpyMasters {
+				return errors.New("Maximum number of spymasters has been reached")
+			}
+
+			g.GameState.SpyMasters = append(g.GameState.SpyMasters, playerID)
+		}
+	}
+
+	return nil
+}
+
+func (g *Game) ResetPlayerRoles() {
+	g.GameState.SpyMasters = make([]string, 0)
 }
 
 func (g *Game) currentTeam() Team {

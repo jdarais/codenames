@@ -100,9 +100,6 @@ export class Game extends React.Component {
       contentType:'application/json; charset=utf-8',
       dataType: 'json',
       success: (data => {
-        if (this.state.game && data.created_at != this.state.game.created_at) {
-          this.setState({ codemaster: false });
-        }
         this.setState({ game: data });
       }),
       complete: () => {
@@ -115,7 +112,29 @@ export class Game extends React.Component {
 
   public toggleRole(e, role) {
     e.preventDefault();
-    this.setState({ codemaster: role == 'codemaster' });
+    $.post(
+      '/player-role',
+      JSON.stringify({
+        game_id: this.state.game.id,
+        player_role: role
+      })
+    ).done(data => {
+      this.setState({ game: data });
+    }).fail(err => {
+      alert(err.responseText);
+    })
+  }
+
+  public resetPlayerRoles(e) {
+    e.preventDefault();
+    $.post(
+      '/reset-player-roles',
+      JSON.stringify({
+        game_id: this.state.game.id
+      })
+    ).done(data => {
+      this.setState({ game: data })
+    })
   }
 
   public guess(e, idx, word) {
@@ -186,7 +205,7 @@ export class Game extends React.Component {
         create_new: true,
       }),
       g => {
-        this.setState({ game: g, codemaster: false });
+        this.setState({ game: g });
       }
     );
   }
@@ -210,6 +229,24 @@ export class Game extends React.Component {
     vals[setting] = !vals[setting];
     this.setState({ settings: vals });
     Settings.save(vals);
+  }
+
+  private isCodemaster() {
+    return this.state.game.spy_masters.indexOf(this.getPlayerId()) >= 0;
+  }
+
+  private getPlayerId() {
+    var playerId = '';
+    document.cookie.split(';').some((c) => {
+      let [k, v] = c.split('=');
+      if (k === 'player_id') {
+        playerId = v;
+        return true;
+      }
+      return false;
+    });
+
+    return playerId;
   }
 
   render() {
@@ -236,7 +273,7 @@ export class Game extends React.Component {
     }
 
     let endTurnButton;
-    if (!this.state.game.winning_team && !this.state.codemaster) {
+    if (!this.state.game.winning_team && !this.isCodemaster()) {
       endTurnButton = (
         <div id="end-turn-cont">
           <button onClick={e => this.endTurn(e)} id="end-turn-btn">
@@ -267,7 +304,7 @@ export class Game extends React.Component {
       <div
         id="game-view"
         className={
-          (this.state.codemaster ? 'codemaster' : 'player') +
+          (this.isCodemaster() ? 'codemaster' : 'player') +
           this.extraClasses()
         }
       >
@@ -306,7 +343,7 @@ export class Game extends React.Component {
         <form
           id="mode-toggle"
           className={
-            this.state.codemaster ? 'codemaster-selected' : 'player-selected'
+            this.isCodemaster() ? 'codemaster-selected' : 'player-selected'
           }
         >
           <SettingsButton
@@ -325,6 +362,9 @@ export class Game extends React.Component {
             className="codemaster"
           >
             Spymaster
+          </button>
+          <button onClick={e => this.resetPlayerRoles(e)} id="reset-spymasters-btn">
+            Reset Spymasters
           </button>
           <button onClick={e => this.nextGame(e)} id="next-game-btn">
             Next game

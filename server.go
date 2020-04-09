@@ -217,6 +217,79 @@ func (s *Server) handleEndTurn(rw http.ResponseWriter, req *http.Request) {
 	writeGame(rw, gh)
 }
 
+// POST /player-role
+func (s *Server) handlePlayerRole(rw http.ResponseWriter, req *http.Request) {
+	var request struct {
+		GameID 		string	`json:"game_id"`
+		PlayerRole	string	`json:"player_role"`
+	}
+
+	if err := json.NewDecoder(req.Body).Decode(&request); err != nil {
+		http.Error(rw, "Error decoding", 400)
+		return
+	}
+
+	isSpyMaster := false
+	switch request.PlayerRole {
+		case "codemaster":
+			isSpyMaster = true
+		case "player":
+			isSpyMaster = false
+		default:
+			http.Error(rw, "Invalid player type", 400)
+			return
+	}
+
+	playerID := getPlayerID(req)
+	if playerID == "" {
+		http.Error(rw, "No player ID provided", 400)
+		return
+	}
+
+	gh, ok := s.getGame(request.GameID)
+
+	if !ok {
+		http.Error(rw, "No such game", 404)
+		return
+	}
+
+	var err error
+	gh.update(func(g *Game) {
+		err = g.SetSpyMaster(playerID, isSpyMaster)
+	})
+
+	if err != nil {
+		http.Error(rw, err.Error(), 400)
+		return
+	}
+
+	writeGame(rw, gh)
+}
+
+// POST /reset-player-roles
+func (s *Server) handleResetPlayerRoles(rw http.ResponseWriter, req *http.Request) {
+	var request struct {
+		GameID 		string	`json:"game_id"`
+	}
+
+	if err := json.NewDecoder(req.Body).Decode(&request); err != nil {
+		http.Error(rw, "Error decoding", 400)
+		return
+	}
+
+	gh, ok := s.getGame(request.GameID)
+
+	if !ok {
+		http.Error(rw, "No such game", 404)
+		return
+	}
+	gh.update(func(g *Game) {
+		g.ResetPlayerRoles()
+	})
+	
+	writeGame(rw, gh)
+}
+
 func (s *Server) handleNextGame(rw http.ResponseWriter, req *http.Request) {
 	var request struct {
 		GameID    string   `json:"game_id"`
@@ -336,6 +409,8 @@ func (s *Server) Start(games map[string]*Game) error {
 	s.mux.HandleFunc("/end-turn", s.handleEndTurn)
 	s.mux.HandleFunc("/guess", s.handleGuess)
 	s.mux.HandleFunc("/game-state", s.handleGameState)
+	s.mux.HandleFunc("/player-role", s.handlePlayerRole)
+	s.mux.HandleFunc("/reset-player-roles", s.handleResetPlayerRoles)
 	s.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("frontend/dist"))))
 	s.mux.HandleFunc("/", s.handleIndex)
 
@@ -405,6 +480,23 @@ func basicAuth(handler http.Handler, password, realm string) http.Handler {
 		}
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func getPlayerID(req *http.Request) string {
+	cookieHeaders := req.Header["Cookie"]
+	for _, cookieHeader := range cookieHeaders {
+		cookies := strings.Split(cookieHeader, ";")
+		for _, cookie := range cookies {
+			c := strings.Split(strings.TrimSpace(cookie), "=")
+			k := c[0]
+			v := c[1]
+			if k == "player_id" {
+				return v
+			}
+		}
+	}
+
+	return ""
 }
 
 func writeGame(rw http.ResponseWriter, gh *GameHandle) {

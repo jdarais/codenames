@@ -14,7 +14,7 @@
     "react-dom": "^16.8.6"
   },
   "scripts": {
-    "start": "parcel watch app.tsx game.css lobby.css",
-    "build": "./build.sh"
+    "start": "parcel --public-url /static/ watch app.tsx game.css lobby.css",
+    "build": "parcel build --public-url /static/ build app.tsx game.css lobby.css"
   }
 }

@@ -1,4 +1,4 @@
-module github.com/jbowens/codenames
+module github.com/jdarais/codenames
 
 go 1.13
 

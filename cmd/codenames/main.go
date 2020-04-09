@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/pebble"
-	"github.com/jbowens/codenames"
+	"../.."
 )
 
 const listenAddr = ":9091"
