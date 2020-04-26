@@ -370,7 +370,11 @@ export class Game extends React.Component {
             Next game
           </button>
         </form>
-        <div id="coffee"><a href="https://www.buymeacoffee.com/jbowens" target="_blank">Buy the developer a coffee.</a></div>
+        <div id="coffee">
+          <p>Site hosted by Jeremiah Darais</p>
+          <p>Original author: <a href="https://github.com/jbowens">github.com/jbowens</a></p>
+          <p>Original game hosted at <a href="http://horsepaste.com">http://horsepaste.com</a></p>
+          <p><a href="https://www.buymeacoffee.com/jbowens" target="_blank">Buy the original author a coffee.</a></p></div>
       </div>
     );
   }
